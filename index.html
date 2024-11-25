@@ -1,0 +1,73 @@
+<script type="module">
+    // Import necessary Three.js modules
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.module.js';
+    import { OrbitControls } from './js/OrbitControls.js'; // Assuming OrbitControls.js is in a 'js' folder
+    
+    let scene, camera, renderer, cube, controls;
+
+    function init() {
+        // Set up the scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xeeeeee); // Set background color
+
+        // Set up the camera (Perspective camera)
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5; // Place the camera in front of the cube
+
+        // Set up the WebGL renderer
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add ambient light to illuminate the cube
+        const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+        scene.add(ambientLight);
+
+        // Add a directional light to give some depth
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 5, 5).normalize();
+        scene.add(directionalLight);
+
+        // Add a cube to the scene
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Use a standard material for better lighting effect
+        cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // Add OrbitControls for camera navigation
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // Smooth motion
+        controls.dampingFactor = 0.25;
+        controls.screenSpacePanning = false; // Disables panning along the screen plane
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+
+        // Animation loop
+        animate();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotate the cube for a simple animation
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+
+        // Update the controls
+        controls.update();
+
+        // Render the scene
+        renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+        // Update camera aspect ratio and renderer size when the window is resized
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Initialize everything
+    init();
+</script>
