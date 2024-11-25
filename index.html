@@ -5,13 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Cube Navigation</title>
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100%; }
+        canvas { display: block; flex-grow: 1; }
+        .ui-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .file-input {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            z-index: 10;
+        }
+        .color-picker {
+            position: absolute;
+            top: 180px;
+            left: 20px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
     <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/FBXLoader.js"></script>
     
+    <div class="ui-controls">
+        <button class="button" onclick="toggleWireframe()">Toggle Wireframe</button>
+        <button class="button" onclick="toggleShaded()">Toggle Shaded</button>
+        <button class="button" onclick="toggleTextured()">Toggle Textured</button>
+    </div>
+
+    <!-- File upload button -->
+    <input type="file" class="file-input" id="fileInput" accept=".obj, .fbx">
+
+    <!-- Color Picker for changing the cube color -->
+    <input type="color" class="color-picker" id="colorPicker" value="#00ff00">
+
     <script>
         // Set up basic scene
         const scene = new THREE.Scene();
@@ -20,16 +66,25 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Create a cube and add it to the scene
+        // Create a cube geometry and material
         const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
+
+        // Materials for different modes
+        const shadedMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+
+        // Load a texture for the textured mode
+        const texture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/crate.gif');
+        const texturedMaterial = new THREE.MeshBasicMaterial({ map: texture });
+
+        // Create cube with initial material (shaded)
+        const cube = new THREE.Mesh(geometry, shadedMaterial);
         scene.add(cube);
 
         // Position the camera
         camera.position.z = 5;
 
-        // OrbitControls implementation (embedded directly in the HTML)
+        // OrbitControls embedded (same as before)
         let isMouseDown = false;
         let prevMousePos = { x: 0, y: 0 };
         let rotationSpeed = 0.005;
@@ -56,12 +111,33 @@
             isMouseDown = false;
         });
 
-        // Zoom functionality (scroll)
+        // Smooth zoom functionality (scroll)
+        let targetZoom = camera.position.z;
+        const zoomSpeed = 0.05;  // Sensitivity of zoom
+        const zoomSmoothness = 0.1; // How smooth the zoom transition is
+
         window.addEventListener('wheel', (event) => {
-            const zoomSpeed = 0.1;
-            camera.position.z += event.deltaY * zoomSpeed;
-            camera.position.z = Math.max(1, Math.min(10, camera.position.z));  // Limit zoom to a range
+            // For scroll up (negative deltaY), reduce zoom factor (less zoom effect)
+            if (event.deltaY < 0) {
+                targetZoom += event.deltaY * zoomSpeed * 0.1; // Less zoom on scroll up
+            }
+            // For scroll down (positive deltaY), apply regular zoom factor
+            else {
+                targetZoom += event.deltaY * zoomSpeed;
+            }
+
+            // Limit the zoom range
+            targetZoom = Math.max(1, Math.min(10, targetZoom));
         });
+
+        // Smoothly interpolate the camera zoom
+        function smoothZoom() {
+            // Gradually move camera to target zoom position
+            camera.position.z += (targetZoom - camera.position.z) * zoomSmoothness;
+
+            // Call smoothZoom again in the next frame
+            requestAnimationFrame(smoothZoom);
+        }
 
         // Handle window resizing
         window.addEventListener('resize', () => {
@@ -70,11 +146,72 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // Functions to toggle between modes
+        function toggleWireframe() {
+            cube.material = wireframeMaterial;
+        }
+
+        function toggleShaded() {
+            cube.material = shadedMaterial;
+        }
+
+        function toggleTextured() {
+            cube.material = texturedMaterial;
+        }
+
+        // Load OBJ file (using OBJLoader)
+        function loadOBJ(file) {
+            const objLoader = new THREE.OBJLoader();
+            const objectURL = URL.createObjectURL(file); // Create blob URL from the uploaded file
+            objLoader.load(objectURL, function (object) {
+                scene.add(object);
+            }, undefined, function (error) {
+                console.error('Error loading OBJ:', error);
+            });
+        }
+
+        // Load FBX file (using FBXLoader)
+        function loadFBX(file) {
+            const fbxLoader = new THREE.FBXLoader();
+            const objectURL = URL.createObjectURL(file); // Create blob URL from the uploaded file
+            fbxLoader.load(objectURL, function (object) {
+                scene.add(object);
+            }, undefined, function (error) {
+                console.error('Error loading FBX:', error);
+            });
+        }
+
+        // Listen for file input changes (file selection)
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension === 'obj') {
+                    // Load OBJ file
+                    loadOBJ(file);
+                } else if (fileExtension === 'fbx') {
+                    // Load FBX file
+                    loadFBX(file);
+                } else {
+                    alert('Unsupported file format. Please upload an OBJ or FBX file.');
+                }
+            }
+        });
+
+        // Handle color picker change
+        document.getElementById('colorPicker').addEventListener('input', function(event) {
+            const colorValue = event.target.value;  // Get selected color
+            cube.material.color.set(colorValue);  // Set the color of the cube
+        });
+
         // Rendering function
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
+
+        // Start the smooth zoom process
+        smoothZoom();
 
         animate();
     </script>
