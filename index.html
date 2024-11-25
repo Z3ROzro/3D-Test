@@ -29,14 +29,12 @@
         // Position the camera
         camera.position.z = 5;
 
-        // OrbitControls.js code starts here
-        // This handles mouse events and adjusts camera rotation
+        // OrbitControls implementation (embedded directly in the HTML)
         let isMouseDown = false;
         let prevMousePos = { x: 0, y: 0 };
-
         let rotationSpeed = 0.005;
 
-        // Handle mouse down, move, and up events
+        // Mouse control for dragging
         window.addEventListener('mousedown', (event) => {
             isMouseDown = true;
             prevMousePos = { x: event.clientX, y: event.clientY };
@@ -58,21 +56,21 @@
             isMouseDown = false;
         });
 
-        // Add zooming functionality
+        // Zoom functionality (scroll)
         window.addEventListener('wheel', (event) => {
             const zoomSpeed = 0.1;
             camera.position.z += event.deltaY * zoomSpeed;
             camera.position.z = Math.max(1, Math.min(10, camera.position.z));  // Limit zoom to a range
         });
 
-        // Resize handling
+        // Handle window resizing
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Render the scene
+        // Rendering function
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
